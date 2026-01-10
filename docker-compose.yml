@@ -4,10 +4,10 @@ services:
     container_name: traefik
     restart: always
     environment:
-      - CLOUDFLARE_EMAIL=${CLOUDFLARE_EMAIL}
-      - CLOUDFLARE_DNS_API_TOKEN=${CLOUDFLARE_DNS_API_TOKEN}
-      - CLOUDFLARE_ZONE_API_TOKEN=${CLOUDFLARE_ZONE_API_TOKEN}
       - LETS_ENCRYPT_EMAIL=${LETS_ENCRYPT_EMAIL}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_REGION}
     command:
       - --ping=true
       - --providers.docker=true
@@ -38,6 +38,8 @@ services:
   sonarr:
     image: lscr.io/linuxserver/sonarr
     container_name: sonarr
+    ports:
+      - "8989:8989"
     environment:
       - PUID=${USER_ID}
       - PGID=${GROUP_ID}
@@ -63,11 +65,13 @@ services:
       - homepage.description=Series management
       - homepage.weight=0
       - homepage.widget.type=sonarr
-      - homepage.widget.url=http://sonarr:8989/sonarr
+      - homepage.widget.url=http://sonarr:8989
       - homepage.widget.key=${SONARR_API_KEY}
   radarr:
     image: lscr.io/linuxserver/radarr
     container_name: radarr
+    ports:
+      - "7878:7878"
     environment:
       - PUID=${USER_ID}
       - PGID=${GROUP_ID}
@@ -93,11 +97,13 @@ services:
       - homepage.description=Movies management
       - homepage.weight=1
       - homepage.widget.type=radarr
-      - homepage.widget.url=http://radarr:7878/radarr
+      - homepage.widget.url=http://radarr:7878
       - homepage.widget.key=${RADARR_API_KEY}
   lidarr:
     image: lscr.io/linuxserver/lidarr
     container_name: lidarr
+    ports:
+      - "8686:8686"
     environment:
       - PUID=${USER_ID}
       - PGID=${GROUP_ID}
@@ -123,13 +129,15 @@ services:
       - homepage.description=Music management
       - homepage.weight=2
       - homepage.widget.type=lidarr
-      - homepage.widget.url=http://lidarr:8686/lidarr
+      - homepage.widget.url=http://lidarr:8686
       - homepage.widget.key=${LIDARR_API_KEY}
     profiles:
       - lidarr
   bazarr:
     image: lscr.io/linuxserver/bazarr
     container_name: bazarr
+    ports:
+      - "6767:6767"
     environment:
       - PUID=${USER_ID}
       - PGID=${GROUP_ID}
@@ -155,11 +163,13 @@ services:
       - homepage.description=Subtitles management
       - homepage.weight=4
       - homepage.widget.type=bazarr
-      - homepage.widget.url=http://bazarr:6767/bazarr
+      - homepage.widget.url=http://bazarr:6767
       - homepage.widget.key=${BAZARR_API_KEY}
   jellyseerr:
     image: ghcr.io/fallenbagel/jellyseerr:latest
     container_name: jellyseerr
+    ports:
+      - "5055:5055"
     environment:
       - LOG_LEVEL=debug
       - TZ=${TIMEZONE}
@@ -202,16 +212,12 @@ services:
     volumes:
       - ${CONFIG_ROOT:-.}/prowlarr:/config
     restart: always
+    network_mode: "service:vpn"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:9696/prowlarr/ping"]
       interval: 1m
       retries: 10
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.prowlarr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/prowlarr`))
-      - traefik.http.routers.prowlarr.tls=true
-      - traefik.http.routers.prowlarr.tls.certresolver=myresolver
-      - traefik.http.services.prowlarr.loadbalancer.server.port=9696
       - homepage.group=Download
       - homepage.name=Prowlarr
       - homepage.icon=prowlarr.png
@@ -219,12 +225,13 @@ services:
       - homepage.description=Indexers management
       - homepage.weight=1
       - homepage.widget.type=prowlarr
-      - homepage.widget.url=http://prowlarr:9696/prowlarr
+      - homepage.widget.url=http://vpn:9696
       - homepage.widget.key=${PROWLARR_API_KEY}
   flaresolverr:
     image: 21hsmw/flaresolverr:nodriver
     container_name: flaresolverr
     restart: always
+    network_mode: "service:vpn"
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - LOG_HTML=${LOG_HTML:-false}
@@ -288,9 +295,6 @@ services:
       interval: 1m
       retries: 10
     network_mode: "service:vpn"
-    depends_on:
-      vpn:
-        condition: service_healthy
     labels:
       - traefik.enable=true
       - traefik.http.routers.qbittorrent.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/qbittorrent`))
@@ -316,33 +320,49 @@ services:
       - homepage.widget.username=${QBITTORRENT_USERNAME}
       - homepage.widget.password=${QBITTORRENT_PASSWORD}
   vpn:
-    image: ghcr.io/thrnz/docker-wireguard-pia:latest
+    image: qmcgaw/gluetun:latest
     container_name: vpn
-    volumes:
-      - ${CONFIG_ROOT:-.}/pia:/pia
-      - ${CONFIG_ROOT:-.}/pia-shared:/pia-shared
     cap_add:
       - NET_ADMIN
-      - SYS_MODULE
+    devices:
+      - /dev/net/tun
+    env_file:
+      - .env
     environment:
-      - LOC=${PIA_LOCATION}
-      - USER=${PIA_USER}
-      - PASS=${PIA_PASS}
-      - QBT_USER=${QBITTORRENT_USERNAME}
-      - QBT_PASS=${QBITTORRENT_PASSWORD}
-      - LOCAL_NETWORK=${PIA_LOCAL_NETWORK}
-      - PORT_FORWARDING=1
-      - PORT_PERSIST=1
-      - PORT_SCRIPT=/pia-shared/portupdate-qbittorrent.sh
-      - FIREWALL=0
-      - ACTIVE_HEALTHCHECKS=1
-      - RECONNECT=1
-    sysctls:
-      - net.ipv4.conf.all.src_valid_mark=1
-      - net.ipv6.conf.default.disable_ipv6=1
-      - net.ipv6.conf.all.disable_ipv6=1
-      - net.ipv6.conf.lo.disable_ipv6=1
+      - VPN_SERVICE_PROVIDER=protonvpn
+      - VPN_TYPE=openvpn
+      - OPENVPN_USER=${PROTONVPN_USER}
+      - OPENVPN_PASSWORD=${PROTONVPN_PASSWORD}
+      - FIREWALL_OUTBOUND_SUBNETS=${LOCAL_SUBNET:-192.168.1.0/24}
+      - TZ=${TIMEZONE}
+      - DNS_UPSTREAM_RESOLVER_TYPE=plain
+      - DNS_UPSTREAM_RESOLVERS=cloudflare,google
+    volumes:
+      - ${CONFIG_ROOT:-.}/protonvpn:/gluetun
+    extra_hosts:
+      - host.docker.internal:172.17.0.1
+    ports:
+      - "8080:8080"
+      - "6881:6881"
+      - "6881:6881/udp"
+      - "9696:9696"
+      - "8191:8191"
     restart: always
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:9999 >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 1m
+      retries: 10
+      start_period: 120s
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.prowlarr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/prowlarr`))
+      - traefik.http.routers.prowlarr.tls=true
+      - traefik.http.routers.prowlarr.tls.certresolver=myresolver
+      - traefik.http.services.prowlarr.loadbalancer.server.port=9696
   cross-seed:
     image: ghcr.io/cross-seed/cross-seed:latest
     container_name: cross-seed
@@ -406,6 +426,8 @@ services:
   huntarr:
     image: ghcr.io/plexguide/huntarr:latest
     container_name: huntarr
+    ports:
+      - "9705:9705"
     restart: always
     environment:
       - PUID=${USER_ID}
@@ -442,15 +464,19 @@ services:
       - PUID=${USER_ID}
       - PGID=${GROUP_ID}
       - TZ=${TIMEZONE}
+    ports:
+      - "8081:8080"
     volumes:
       - ${CONFIG_ROOT:-.}/sabnzbd:/config
       - ${DATA_ROOT}:/data
     restart: always
     labels:
       - traefik.enable=true
-      - traefik.http.routers.sabnzbd.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/sabnzbd`) || PathPrefix(`/sabnzbd`))
+      - traefik.http.middlewares.sabnzbd-strip.stripprefix.prefixes=/sabnzbd
+      - traefik.http.routers.sabnzbd.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/sabnzbd`))
       - traefik.http.routers.sabnzbd.tls=true
       - traefik.http.routers.sabnzbd.tls.certresolver=myresolver
+      - traefik.http.routers.sabnzbd.middlewares=sabnzbd-strip
       - traefik.http.services.sabnzbd.loadbalancer.server.port=8080
       - homepage.group=Download
       - homepage.name=Sabnzbd
@@ -459,7 +485,7 @@ services:
       - homepage.description=Usenet
       - homepage.weight=3
       - homepage.widget.type=sabnzbd
-      - homepage.widget.url=http://sabnzbd:8080/sabnzbd
+      - homepage.widget.url=http://sabnzbd:8080
       - homepage.widget.key=${SABNZBD_API_KEY}
     profiles:
       - sabnzbd
@@ -477,6 +503,7 @@ services:
     ports:
       - "7359:7359/udp"
       - "1900:1900/udp"
+      - "8096:8096"
     restart: always
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:8096/jellyfin/health"]
@@ -484,9 +511,11 @@ services:
       retries: 10
     labels:
       - traefik.enable=true
+      - traefik.http.middlewares.jellyfin-strip.stripprefix.prefixes=/jellyfin
       - traefik.http.routers.jellyfin.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/jellyfin`))
       - traefik.http.routers.jellyfin.tls=true
       - traefik.http.routers.jellyfin.tls.certresolver=myresolver
+      - traefik.http.routers.jellyfin.middlewares=jellyfin-strip
       - traefik.http.services.jellyfin.loadbalancer.server.port=8096
       - homepage.group=Media
       - homepage.name=Jellyfin
@@ -500,6 +529,8 @@ services:
   calibre-web:
     image: lscr.io/linuxserver/calibre-web:latest
     container_name: calibre-web
+    ports:
+      - "8083:8083"
     environment:
       - PUID=${USER_ID}
       - PGID=${GROUP_ID}
@@ -535,6 +566,8 @@ services:
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage
+    ports:
+      - "3000:3000"
     environment:
       - HOMEPAGE_VAR_TITLE=${HOMEPAGE_VAR_TITLE}
       - HOMEPAGE_VAR_SEARCH_PROVIDER=${HOMEPAGE_VAR_SEARCH_PROVIDER}
@@ -554,10 +587,29 @@ services:
       [sh, -c, "cp -n /app/config/tpl/*.yaml /app/config && node server.js"]
     labels:
       - traefik.enable=true
+      - traefik.http.middlewares.homepage-auth.basicauth.users=${HOMEPAGE_BASIC_AUTH}
       - traefik.http.routers.homepage.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/`))
       - traefik.http.routers.homepage.tls=true
       - traefik.http.routers.homepage.tls.certresolver=myresolver
+      - traefik.http.routers.homepage.middlewares=homepage-auth
       - traefik.http.services.homepage.loadbalancer.server.port=3000
+  route53-ddns:
+    image: amazon/aws-cli:2.15.41
+    container_name: route53-ddns
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_REGION}
+      - ROUTE53_ZONE_ID=${ROUTE53_ZONE_ID}
+      - ROUTE53_RECORDS=${ROUTE53_RECORDS}
+      - ROUTE53_TTL=${ROUTE53_TTL}
+      - ROUTE53_UPDATE_INTERVAL=${ROUTE53_UPDATE_INTERVAL}
+      - TZ=${TIMEZONE}
+    volumes:
+      - ${CONFIG_ROOT:-.}/route53-ddns:/opt/route53-ddns:ro
+      - route53-ddns-state:/var/lib/route53-ddns
+    entrypoint: ["/bin/sh", "/opt/route53-ddns/entrypoint.sh"]
+    restart: always
   watchtower:
     image: ghcr.io/nicholas-fedor/watchtower:latest
     container_name: watchtower
@@ -578,3 +630,6 @@ services:
 networks:
   default:
     name: docker-compose-nas
+
+volumes:
+  route53-ddns-state:
