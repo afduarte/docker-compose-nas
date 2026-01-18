@@ -10,6 +10,8 @@ services:
       - AWS_DEFAULT_REGION=${AWS_REGION}
     command:
       - --ping=true
+      - --log.level=INFO
+      - --accesslog=true
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --entrypoints.web.address=:80
@@ -29,296 +31,10 @@ services:
     volumes:
       - ${CONFIG_ROOT:-.}/letsencrypt:/letsencrypt
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
-    extra_hosts:
-      - host.docker.internal:172.17.0.1
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 1m
       retries: 10
-  sonarr:
-    image: lscr.io/linuxserver/sonarr
-    container_name: sonarr
-    ports:
-      - "8989:8989"
-    environment:
-      - PUID=${USER_ID}
-      - PGID=${GROUP_ID}
-      - TZ=${TIMEZONE}
-    volumes:
-      - ${CONFIG_ROOT:-.}/sonarr:/config
-      - ${DATA_ROOT}:/data
-    restart: always
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8989/sonarr/ping"]
-      interval: 1m
-      retries: 10
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.sonarr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/sonarr`))
-      - traefik.http.routers.sonarr.tls=true
-      - traefik.http.routers.sonarr.tls.certresolver=myresolver
-      - traefik.http.services.sonarr.loadbalancer.server.port=8989
-      - homepage.group=Media
-      - homepage.name=Sonarr
-      - homepage.icon=sonarr.png
-      - homepage.href=/sonarr
-      - homepage.description=Series management
-      - homepage.weight=0
-      - homepage.widget.type=sonarr
-      - homepage.widget.url=http://sonarr:8989
-      - homepage.widget.key=${SONARR_API_KEY}
-  radarr:
-    image: lscr.io/linuxserver/radarr
-    container_name: radarr
-    ports:
-      - "7878:7878"
-    environment:
-      - PUID=${USER_ID}
-      - PGID=${GROUP_ID}
-      - TZ=${TIMEZONE}
-    volumes:
-      - ${CONFIG_ROOT:-.}/radarr:/config
-      - ${DATA_ROOT}:/data
-    restart: always
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://127.0.0.1:7878/radarr/ping"]
-      interval: 1m
-      retries: 10
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.radarr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/radarr`))
-      - traefik.http.routers.radarr.tls=true
-      - traefik.http.routers.radarr.tls.certresolver=myresolver
-      - traefik.http.services.radarr.loadbalancer.server.port=7878
-      - homepage.group=Media
-      - homepage.name=Radarr
-      - homepage.icon=radarr.png
-      - homepage.href=/radarr
-      - homepage.description=Movies management
-      - homepage.weight=1
-      - homepage.widget.type=radarr
-      - homepage.widget.url=http://radarr:7878
-      - homepage.widget.key=${RADARR_API_KEY}
-  lidarr:
-    image: lscr.io/linuxserver/lidarr
-    container_name: lidarr
-    ports:
-      - "8686:8686"
-    environment:
-      - PUID=${USER_ID}
-      - PGID=${GROUP_ID}
-      - TZ=${TIMEZONE}
-    volumes:
-      - ${CONFIG_ROOT:-.}/lidarr:/config
-      - ${DATA_ROOT}:/data
-    restart: always
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8686/lidarr/ping"]
-      interval: 1m
-      retries: 10
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.lidarr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/lidarr`))
-      - traefik.http.routers.lidarr.tls=true
-      - traefik.http.routers.lidarr.tls.certresolver=myresolver
-      - traefik.http.services.lidarr.loadbalancer.server.port=8686
-      - homepage.group=Media
-      - homepage.name=Lidarr
-      - homepage.icon=lidarr.png
-      - homepage.href=/lidarr
-      - homepage.description=Music management
-      - homepage.weight=2
-      - homepage.widget.type=lidarr
-      - homepage.widget.url=http://lidarr:8686
-      - homepage.widget.key=${LIDARR_API_KEY}
-    profiles:
-      - lidarr
-  bazarr:
-    image: lscr.io/linuxserver/bazarr
-    container_name: bazarr
-    ports:
-      - "6767:6767"
-    environment:
-      - PUID=${USER_ID}
-      - PGID=${GROUP_ID}
-      - TZ=${TIMEZONE}
-    volumes:
-      - ${CONFIG_ROOT:-.}/bazarr/config:/config
-      - ${DATA_ROOT}:/data
-    restart: always
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://127.0.0.1:6767/bazarr/ping"]
-      interval: 1m
-      retries: 10
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.bazarr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/bazarr`))
-      - traefik.http.routers.bazarr.tls=true
-      - traefik.http.routers.bazarr.tls.certresolver=myresolver
-      - traefik.http.services.bazarr.loadbalancer.server.port=6767
-      - homepage.group=Download
-      - homepage.name=Bazarr
-      - homepage.icon=bazarr.png
-      - homepage.href=/bazarr
-      - homepage.description=Subtitles management
-      - homepage.weight=4
-      - homepage.widget.type=bazarr
-      - homepage.widget.url=http://bazarr:6767
-      - homepage.widget.key=${BAZARR_API_KEY}
-  jellyseerr:
-    image: ghcr.io/fallenbagel/jellyseerr:latest
-    container_name: jellyseerr
-    ports:
-      - "5055:5055"
-    environment:
-      - LOG_LEVEL=debug
-      - TZ=${TIMEZONE}
-    volumes:
-      - ${CONFIG_ROOT:-.}/jellyseerr:/app/config
-    restart: always
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "http://127.0.0.1:5055/api/v1/status",
-          "-qO",
-          "/dev/null",
-        ]
-      interval: 1m
-      retries: 10
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.jellyseerr.rule=(Host(`${JELLYSEERR_HOSTNAME}`))
-      - traefik.http.routers.jellyseerr.tls=true
-      - traefik.http.routers.jellyseerr.tls.certresolver=myresolver
-      - traefik.http.services.jellyseerr.loadbalancer.server.port=5055
-      - homepage.group=Media
-      - homepage.name=JellySeerr
-      - homepage.icon=jellyseerr.png
-      - homepage.href=https://${JELLYSEERR_HOSTNAME}
-      - homepage.description=Content Recommendations and Request Management
-      - homepage.weight=3
-      - homepage.widget.type=jellyseerr
-      - homepage.widget.url=http://jellyseerr:5055
-      - homepage.widget.key=${JELLYSEERR_API_KEY}
-  prowlarr:
-    image: lscr.io/linuxserver/prowlarr:latest
-    container_name: prowlarr
-    environment:
-      - PUID=${USER_ID}
-      - PGID=${GROUP_ID}
-      - TZ=${TIMEZONE}
-    volumes:
-      - ${CONFIG_ROOT:-.}/prowlarr:/config
-    restart: always
-    network_mode: "service:vpn"
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://127.0.0.1:9696/prowlarr/ping"]
-      interval: 1m
-      retries: 10
-    labels:
-      - homepage.group=Download
-      - homepage.name=Prowlarr
-      - homepage.icon=prowlarr.png
-      - homepage.href=/prowlarr
-      - homepage.description=Indexers management
-      - homepage.weight=1
-      - homepage.widget.type=prowlarr
-      - homepage.widget.url=http://vpn:9696
-      - homepage.widget.key=${PROWLARR_API_KEY}
-  flaresolverr:
-    image: 21hsmw/flaresolverr:nodriver
-    container_name: flaresolverr
-    restart: always
-    network_mode: "service:vpn"
-    environment:
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-      - LOG_HTML=${LOG_HTML:-false}
-      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
-      - TZ=${TIMEZONE}
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.flaresolverr.rule=PathPrefix(`/flaresolverr`)
-      - traefik.http.routers.flaresolverr.tls=true
-      - traefik.http.services.flaresolverr.loadbalancer.server.port=8191
-    profiles:
-      - flaresolverr
-  autobrr:
-    container_name: autobrr
-    image: ghcr.io/autobrr/autobrr:latest
-    restart: always
-    environment:
-      - TZ=${TIMEZONE}
-      - AUTOBRR__BASE_URL=/autobrr/
-    user: ${USER_ID}:${GROUP_ID}
-    volumes:
-      - ${CONFIG_ROOT:-.}/autobrr:/config
-    labels:
-      - traefik.enable=true
-      - traefik.http.middlewares.autobrr-strip.stripprefix.prefixes=/autobrr
-      - traefik.http.middlewares.autobrr-strip.stripprefix.forceSlash=true
-      - traefik.http.routers.autobrr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/autobrr`))
-      - traefik.http.routers.autobrr.tls=true
-      - traefik.http.routers.autobrr.tls.certresolver=myresolver
-      - traefik.http.services.autobrr.loadbalancer.server.port=7474
-      - traefik.http.routers.autobrr.middlewares=autobrr-strip
-      - homepage.group=Download
-      - homepage.name=Autobrr
-      - homepage.icon=autobrr.png
-      - homepage.href=/autobrr
-      - homepage.description=Torrent download automation
-      - homepage.weight=7
-      - homepage.widget.type=autobrr
-      - homepage.widget.url=http://autobrr:7474
-      - homepage.widget.key=${AUTOBRR_API_KEY}
-    profiles:
-      - autobrr
-  qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:libtorrentv1
-    container_name: qbittorrent
-    environment:
-      - PUID=${USER_ID}
-      - PGID=${GROUP_ID}
-      - TZ=${TIMEZONE}
-      - WEBUI_PORT=8080
-      - DOCKER_MODS=ghcr.io/gabe565/linuxserver-mod-vuetorrent
-    volumes:
-      - ${CONFIG_ROOT:-.}/qbittorrent:/config
-      - ${DOWNLOAD_ROOT}:/data/torrents
-    restart: always
-    healthcheck:
-      # Container may fail if the PIA's token expired, so mark as unhealthy when there is no internet connection
-      # see: https://github.com/qdm12/gluetun/issues/641#issuecomment-933856220
-      test:
-        ["CMD", "curl", "--fail", "http://127.0.0.1:8080", "https://google.com"]
-      interval: 1m
-      retries: 10
-    network_mode: "service:vpn"
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.qbittorrent.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/qbittorrent`))
-      - traefik.http.routers.qbittorrent.tls=true
-      - traefik.http.routers.qbittorrent.tls.certresolver=myresolver
-      - traefik.http.services.qbittorrent.loadbalancer.server.port=8080
-      - traefik.http.routers.qbittorrent.middlewares=qbittorrent-strip-slash,qbittorrent-stripprefix
-      # https://github.com/qbittorrent/qBittorrent/issues/5693#issuecomment-552146296
-      - traefik.http.middlewares.qbittorrent-stripprefix.stripPrefix.prefixes=/qbittorrent
-      # https://community.traefik.io/t/middleware-to-add-the-if-needed/1895/19
-      - traefik.http.middlewares.qbittorrent-strip-slash.redirectregex.regex=(^.*\/qbittorrent$$)
-      - traefik.http.middlewares.qbittorrent-strip-slash.redirectregex.replacement=$$1/
-      - traefik.http.middlewares.qbittorrent-strip-slash.redirectregex.permanent=false
-      #- com.centurylinklabs.watchtower.depends-on=/vpn
-      - homepage.group=Download
-      - homepage.name=qBittorrent
-      - homepage.icon=qbittorrent.png
-      - homepage.href=/qbittorrent
-      - homepage.description=Bittorrent client
-      - homepage.weight=2
-      - homepage.widget.type=qbittorrent
-      - homepage.widget.url=http://vpn:8080
-      - homepage.widget.username=${QBITTORRENT_USERNAME}
-      - homepage.widget.password=${QBITTORRENT_PASSWORD}
   vpn:
     image: qmcgaw/gluetun:latest
     container_name: vpn
@@ -339,14 +55,41 @@ services:
       - DNS_UPSTREAM_RESOLVERS=cloudflare,google
     volumes:
       - ${CONFIG_ROOT:-.}/protonvpn:/gluetun
-    extra_hosts:
-      - host.docker.internal:172.17.0.1
     ports:
-      - "8080:8080"
+      # qBittorrent
+      - "9080:9080"
       - "6881:6881"
       - "6881:6881/udp"
+      # Prowlarr
       - "9696:9696"
+      # FlareSolverr
       - "8191:8191"
+      # Sonarr
+      - "8989:8989"
+      # Radarr
+      - "7878:7878"
+      # Lidarr
+      - "8686:8686"
+      # Bazarr
+      - "6767:6767"
+      # Jellyseerr
+      - "5055:5055"
+      # Cleanuparr
+      - "11011:11011"
+      # Huntarr
+      - "9705:9705"
+      # Sabnzbd
+      - "8080:8080"
+      # Jellyfin
+      - "8096:8096"
+      - "7359:7359/udp"
+      - "1900:1900/udp"
+      # Calibre-web
+      - "8083:8083"
+      # Homepage
+      - "3000:3000"
+      # Autobrr
+      - "7474:7474"
     restart: always
     healthcheck:
       test:
@@ -359,33 +102,392 @@ services:
       start_period: 120s
     labels:
       - traefik.enable=true
+      # Sonarr
+      - traefik.http.routers.sonarr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/sonarr`))
+      - traefik.http.routers.sonarr.tls=true
+      - traefik.http.routers.sonarr.tls.certresolver=myresolver
+      - traefik.http.routers.sonarr.service=sonarr
+      - traefik.http.services.sonarr.loadbalancer.server.port=8989
+      # Radarr
+      - traefik.http.routers.radarr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/radarr`))
+      - traefik.http.routers.radarr.tls=true
+      - traefik.http.routers.radarr.tls.certresolver=myresolver
+      - traefik.http.routers.radarr.service=radarr
+      - traefik.http.services.radarr.loadbalancer.server.port=7878
+      # Lidarr
+      - traefik.http.routers.lidarr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/lidarr`))
+      - traefik.http.routers.lidarr.tls=true
+      - traefik.http.routers.lidarr.tls.certresolver=myresolver
+      - traefik.http.routers.lidarr.service=lidarr
+      - traefik.http.services.lidarr.loadbalancer.server.port=8686
+      # Bazarr
+      - traefik.http.routers.bazarr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/bazarr`))
+      - traefik.http.routers.bazarr.tls=true
+      - traefik.http.routers.bazarr.tls.certresolver=myresolver
+      - traefik.http.routers.bazarr.service=bazarr
+      - traefik.http.services.bazarr.loadbalancer.server.port=6767
+      # Jellyseerr
+      - traefik.http.routers.jellyseerr.rule=(Host(`${JELLYSEERR_HOSTNAME}`))
+      - traefik.http.routers.jellyseerr.tls=true
+      - traefik.http.routers.jellyseerr.tls.certresolver=myresolver
+      - traefik.http.routers.jellyseerr.service=jellyseerr
+      - traefik.http.services.jellyseerr.loadbalancer.server.port=5055
+      # Prowlarr
       - traefik.http.routers.prowlarr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/prowlarr`))
       - traefik.http.routers.prowlarr.tls=true
       - traefik.http.routers.prowlarr.tls.certresolver=myresolver
+      - traefik.http.routers.prowlarr.service=prowlarr
       - traefik.http.services.prowlarr.loadbalancer.server.port=9696
+      # FlareSolverr
+      - traefik.http.routers.flaresolverr.rule=PathPrefix(`/flaresolverr`)
+      - traefik.http.routers.flaresolverr.tls=true
+      - traefik.http.routers.flaresolverr.service=flaresolverr
+      - traefik.http.services.flaresolverr.loadbalancer.server.port=8191
+      # Autobrr
+      - traefik.http.middlewares.autobrr-strip.stripprefix.prefixes=/autobrr
+      - traefik.http.middlewares.autobrr-strip.stripprefix.forceSlash=true
+      - traefik.http.routers.autobrr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/autobrr`))
+      - traefik.http.routers.autobrr.tls=true
+      - traefik.http.routers.autobrr.tls.certresolver=myresolver
+      - traefik.http.routers.autobrr.service=autobrr
+      - traefik.http.services.autobrr.loadbalancer.server.port=7474
+      - traefik.http.routers.autobrr.middlewares=autobrr-strip
+      # qBittorrent
+      - traefik.http.routers.qbittorrent.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/qbittorrent`))
+      - traefik.http.routers.qbittorrent.tls=true
+      - traefik.http.routers.qbittorrent.tls.certresolver=myresolver
+      - traefik.http.routers.qbittorrent.service=qbittorrent
+      - traefik.http.services.qbittorrent.loadbalancer.server.port=9080
+      - traefik.http.routers.qbittorrent.middlewares=qbittorrent-strip-slash,qbittorrent-stripprefix
+      - traefik.http.middlewares.qbittorrent-stripprefix.stripPrefix.prefixes=/qbittorrent
+      - traefik.http.middlewares.qbittorrent-strip-slash.redirectregex.regex=(^.*\/qbittorrent$$)
+      - traefik.http.middlewares.qbittorrent-strip-slash.redirectregex.replacement=$$1/
+      - traefik.http.middlewares.qbittorrent-strip-slash.redirectregex.permanent=false
+      # Cleanuparr
+      - traefik.http.routers.cleanuparr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/cleanuparr`))
+      - traefik.http.routers.cleanuparr.tls=true
+      - traefik.http.routers.cleanuparr.tls.certresolver=myresolver
+      - traefik.http.routers.cleanuparr.service=cleanuparr
+      - traefik.http.services.cleanuparr.loadbalancer.server.port=11011
+      # Huntarr
+      - traefik.http.routers.huntarr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/huntarr`))
+      - traefik.http.routers.huntarr.tls=true
+      - traefik.http.routers.huntarr.tls.certresolver=myresolver
+      - traefik.http.routers.huntarr.service=huntarr
+      - traefik.http.services.huntarr.loadbalancer.server.port=9705
+      - traefik.http.middlewares.huntarr-slash.redirectregex.regex=^https?://([^/]+)/huntarr$$
+      - traefik.http.middlewares.huntarr-slash.redirectregex.replacement=https://$${1}/huntarr/
+      - traefik.http.middlewares.huntarr-slash.redirectregex.permanent=true
+      - traefik.http.middlewares.huntarr-strip.stripprefix.prefixes=/huntarr
+      - traefik.http.middlewares.huntarr-xfp.headers.customrequestheaders.X-Forwarded-Prefix=/huntarr
+      - traefik.http.routers.huntarr.middlewares=huntarr-slash,huntarr-strip,huntarr-xfp
+      # Sabnzbd
+      - traefik.http.middlewares.sabnzbd-strip.stripprefix.prefixes=/sabnzbd
+      - traefik.http.routers.sabnzbd.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/sabnzbd`))
+      - traefik.http.routers.sabnzbd.tls=true
+      - traefik.http.routers.sabnzbd.tls.certresolver=myresolver
+      - traefik.http.routers.sabnzbd.service=sabnzbd
+      - traefik.http.routers.sabnzbd.middlewares=sabnzbd-strip
+      - traefik.http.services.sabnzbd.loadbalancer.server.port=8080
+      # Jellyfin
+      - traefik.http.middlewares.jellyfin-strip.stripprefix.prefixes=/jellyfin
+      - traefik.http.routers.jellyfin.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/jellyfin`))
+      - traefik.http.routers.jellyfin.tls=true
+      - traefik.http.routers.jellyfin.tls.certresolver=myresolver
+      - traefik.http.routers.jellyfin.service=jellyfin
+      - traefik.http.routers.jellyfin.middlewares=jellyfin-strip
+      - traefik.http.services.jellyfin.loadbalancer.server.port=8096
+      # Calibre-web
+      - traefik.http.middlewares.calibre-headers.headers.customRequestHeaders.X-Scheme=https
+      - traefik.http.middlewares.calibre-headers.headers.customRequestHeaders.X-Script-Name=/calibre
+      - traefik.http.middlewares.calibre-stripprefixregex.stripPrefixRegex.regex=/calibre
+      - traefik.http.routers.calibre.middlewares=calibre-headers,calibre-stripprefixregex
+      - traefik.http.routers.calibre.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/calibre`))
+      - traefik.http.routers.calibre.tls=true
+      - traefik.http.routers.calibre.tls.certresolver=myresolver
+      - traefik.http.routers.calibre.service=calibre
+      - traefik.http.services.calibre.loadbalancer.server.port=8083
+      # Homepage
+      - traefik.http.middlewares.homepage-auth.basicauth.users=${HOMEPAGE_BASIC_AUTH}
+      - traefik.http.routers.homepage.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/`))
+      - traefik.http.routers.homepage.tls=true
+      - traefik.http.routers.homepage.tls.certresolver=myresolver
+      - traefik.http.routers.homepage.service=homepage
+      - traefik.http.routers.homepage.middlewares=homepage-auth
+      - traefik.http.services.homepage.loadbalancer.server.port=3000
+  sonarr:
+    image: lscr.io/linuxserver/sonarr
+    container_name: sonarr
+    depends_on:
+      vpn:
+        condition: service_healthy
+    environment:
+      - PUID=${USER_ID}
+      - PGID=${GROUP_ID}
+      - TZ=${TIMEZONE}
+    volumes:
+      - ${CONFIG_ROOT:-.}/sonarr:/config
+      - ${DATA_ROOT}:/media
+    restart: always
+    network_mode: "service:vpn"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8989/sonarr/ping"]
+      interval: 1m
+      retries: 10
+    labels:
+      - homepage.group=Media
+      - homepage.name=Sonarr
+      - homepage.icon=sonarr.png
+      - homepage.href=/sonarr
+      - homepage.description=Series management
+      - homepage.weight=0
+      - homepage.widget.type=sonarr
+      - homepage.widget.url=http://localhost:8989
+      - homepage.widget.key=${SONARR_API_KEY}
+  radarr:
+    image: lscr.io/linuxserver/radarr
+    container_name: radarr
+    depends_on:
+      vpn:
+        condition: service_healthy
+    environment:
+      - PUID=${USER_ID}
+      - PGID=${GROUP_ID}
+      - TZ=${TIMEZONE}
+    volumes:
+      - ${CONFIG_ROOT:-.}/radarr:/config
+      - ${DATA_ROOT}:/media
+    restart: always
+    network_mode: "service:vpn"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:7878/radarr/ping"]
+      interval: 1m
+      retries: 10
+    labels:
+      - homepage.group=Media
+      - homepage.name=Radarr
+      - homepage.icon=radarr.png
+      - homepage.href=/radarr
+      - homepage.description=Movies management
+      - homepage.weight=1
+      - homepage.widget.type=radarr
+      - homepage.widget.url=http://localhost:7878
+      - homepage.widget.key=${RADARR_API_KEY}
+  lidarr:
+    image: lscr.io/linuxserver/lidarr
+    container_name: lidarr
+    depends_on:
+      vpn:
+        condition: service_healthy
+    environment:
+      - PUID=${USER_ID}
+      - PGID=${GROUP_ID}
+      - TZ=${TIMEZONE}
+    volumes:
+      - ${CONFIG_ROOT:-.}/lidarr:/config
+      - ${DATA_ROOT}:/media
+    restart: always
+    network_mode: "service:vpn"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8686/lidarr/ping"]
+      interval: 1m
+      retries: 10
+    labels:
+      - homepage.group=Media
+      - homepage.name=Lidarr
+      - homepage.icon=lidarr.png
+      - homepage.href=/lidarr
+      - homepage.description=Music management
+      - homepage.weight=2
+      - homepage.widget.type=lidarr
+      - homepage.widget.url=http://localhost:8686
+      - homepage.widget.key=${LIDARR_API_KEY}
+    profiles:
+      - lidarr
+  bazarr:
+    image: lscr.io/linuxserver/bazarr
+    container_name: bazarr
+    depends_on:
+      vpn:
+        condition: service_healthy
+    environment:
+      - PUID=${USER_ID}
+      - PGID=${GROUP_ID}
+      - TZ=${TIMEZONE}
+    volumes:
+      - ${CONFIG_ROOT:-.}/bazarr/config:/config
+      - ${DATA_ROOT}:/media
+    restart: always
+    network_mode: "service:vpn"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:6767/bazarr/ping"]
+      interval: 1m
+      retries: 10
+    labels:
+      - homepage.group=Download
+      - homepage.name=Bazarr
+      - homepage.icon=bazarr.png
+      - homepage.href=/bazarr
+      - homepage.description=Subtitles management
+      - homepage.weight=4
+      - homepage.widget.type=bazarr
+      - homepage.widget.url=http://localhost:6767
+      - homepage.widget.key=${BAZARR_API_KEY}
+  jellyseerr:
+    image: ghcr.io/fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    depends_on:
+      vpn:
+        condition: service_healthy
+    environment:
+      - LOG_LEVEL=debug
+      - TZ=${TIMEZONE}
+    volumes:
+      - ${CONFIG_ROOT:-.}/jellyseerr:/app/config
+    restart: always
+    network_mode: "service:vpn"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "http://127.0.0.1:5055/api/v1/status",
+          "-qO",
+          "/dev/null",
+        ]
+      interval: 1m
+      retries: 10
+    labels:
+      - homepage.group=Media
+      - homepage.name=JellySeerr
+      - homepage.icon=jellyseerr.png
+      - homepage.href=https://${JELLYSEERR_HOSTNAME}
+      - homepage.description=Content Recommendations and Request Management
+      - homepage.weight=3
+      - homepage.widget.type=jellyseerr
+      - homepage.widget.url=http://localhost:5055
+      - homepage.widget.key=${JELLYSEERR_API_KEY}
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    depends_on:
+      vpn:
+        condition: service_healthy
+    environment:
+      - PUID=${USER_ID}
+      - PGID=${GROUP_ID}
+      - TZ=${TIMEZONE}
+    volumes:
+      - ${CONFIG_ROOT:-.}/prowlarr:/config
+    restart: always
+    network_mode: "service:vpn"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:9696/prowlarr/ping"]
+      interval: 1m
+      retries: 10
+    labels:
+      - homepage.group=Download
+      - homepage.name=Prowlarr
+      - homepage.icon=prowlarr.png
+      - homepage.href=/prowlarr
+      - homepage.description=Indexers management
+      - homepage.weight=1
+      - homepage.widget.type=prowlarr
+      - homepage.widget.url=http://localhost:9696
+      - homepage.widget.key=${PROWLARR_API_KEY}
+  flaresolverr:
+    image: 21hsmw/flaresolverr:nodriver
+    container_name: flaresolverr
+    restart: always
+    network_mode: "service:vpn"
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_HTML=${LOG_HTML:-false}
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
+      - TZ=${TIMEZONE}
+    profiles:
+      - flaresolverr
+  autobrr:
+    container_name: autobrr
+    image: ghcr.io/autobrr/autobrr:latest
+    restart: always
+    environment:
+      - TZ=${TIMEZONE}
+      - AUTOBRR__BASE_URL=/autobrr/
+    user: ${USER_ID}:${GROUP_ID}
+    volumes:
+      - ${CONFIG_ROOT:-.}/autobrr:/config
+    network_mode: "service:vpn"
+    labels:
+      - homepage.group=Download
+      - homepage.name=Autobrr
+      - homepage.icon=autobrr.png
+      - homepage.href=/autobrr
+      - homepage.description=Torrent download automation
+      - homepage.weight=7
+      - homepage.widget.type=autobrr
+      - homepage.widget.url=http://localhost:7474
+      - homepage.widget.key=${AUTOBRR_API_KEY}
+    profiles:
+      - autobrr
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:libtorrentv1
+    container_name: qbittorrent
+    depends_on:
+      vpn:
+        condition: service_healthy
+    environment:
+      - PUID=${USER_ID}
+      - PGID=${GROUP_ID}
+      - TZ=${TIMEZONE}
+      - WEBUI_PORT=9080
+      - DOCKER_MODS=ghcr.io/gabe565/linuxserver-mod-vuetorrent
+    volumes:
+      - ${CONFIG_ROOT:-.}/qbittorrent:/config
+      - ${DOWNLOAD_ROOT}:/media/torrents
+    restart: always
+    healthcheck:
+      test:
+        ["CMD", "curl", "--fail", "http://127.0.0.1:9080", "https://google.com"]
+      interval: 1m
+      retries: 10
+    network_mode: "service:vpn"
+    labels:
+      - homepage.group=Download
+      - homepage.name=qBittorrent
+      - homepage.icon=qbittorrent.png
+      - homepage.href=/qbittorrent
+      - homepage.description=Bittorrent client
+      - homepage.weight=2
+      - homepage.widget.type=qbittorrent
+      - homepage.widget.url=http://localhost:9080
+      - homepage.widget.username=${QBITTORRENT_USERNAME}
+      - homepage.widget.password=${QBITTORRENT_PASSWORD}
   cross-seed:
     image: ghcr.io/cross-seed/cross-seed:latest
     container_name: cross-seed
     user: ${USER_ID}:${GROUP_ID}
     volumes:
       - ${CONFIG_ROOT:-.}/cross-seed:/config
-      - ${DOWNLOAD_ROOT}:/data/torrents
+      - ${DOWNLOAD_ROOT}:/media/torrents
     command: daemon
     restart: always
+    network_mode: "service:vpn"
     profiles:
       - cross-seed
   unpackerr:
     image: ghcr.io/unpackerr/unpackerr:latest
     container_name: unpackerr
     volumes:
-      - ${DOWNLOAD_ROOT}:/data/torrents
+      - ${DOWNLOAD_ROOT}:/media/torrents
     restart: always
     user: ${USER_ID}:${GROUP_ID}
+    network_mode: "service:vpn"
     environment:
       - TZ=${TIMEZONE}
-      - UN_SONARR_0_URL=http://sonarr:8989/sonarr
+      - UN_SONARR_0_URL=http://localhost:8989/sonarr
       - UN_SONARR_0_API_KEY=${SONARR_API_KEY}
-      - UN_RADARR_0_URL=http://radarr:7878/radarr
+      - UN_RADARR_0_URL=http://localhost:7878/radarr
       - UN_RADARR_0_API_KEY=${RADARR_API_KEY}
     security_opt:
       - no-new-privileges:true
@@ -393,6 +495,7 @@ services:
     image: ghcr.io/cleanuparr/cleanuparr:latest
     container_name: cleanuparr
     restart: always
+    network_mode: "service:vpn"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11011/cleanuparr/health"]
       interval: 1m
@@ -410,11 +513,6 @@ services:
       - PGID=${GROUP_ID}
       - BASE_PATH=/cleanuparr
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.cleanuparr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/cleanuparr`))
-      - traefik.http.routers.cleanuparr.tls=true
-      - traefik.http.routers.cleanuparr.tls.certresolver=myresolver
-      - traefik.http.services.cleanuparr.loadbalancer.server.port=11011
       - homepage.group=Download
       - homepage.name=Cleanuparr
       - homepage.icon=cleanuperr.png
@@ -426,29 +524,15 @@ services:
   huntarr:
     image: ghcr.io/plexguide/huntarr:latest
     container_name: huntarr
-    ports:
-      - "9705:9705"
     restart: always
+    network_mode: "service:vpn"
     environment:
       - PUID=${USER_ID}
       - PGID=${GROUP_ID}
       - TZ=${TIMEZONE}
-      # Not using Huntarr's base URL feature until this is merged: https://github.com/plexguide/Huntarr.io/pull/760
-      # - BASE_URL=/huntarr
     volumes:
       - ${CONFIG_ROOT:-.}/huntarr:/config
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.huntarr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/huntarr`))
-      - traefik.http.routers.huntarr.tls=true
-      - traefik.http.routers.huntarr.tls.certresolver=myresolver
-      - traefik.http.services.huntarr.loadbalancer.server.port=9705
-      - traefik.http.middlewares.huntarr-slash.redirectregex.regex=^https?://([^/]+)/huntarr$
-      - traefik.http.middlewares.huntarr-slash.redirectregex.replacement=https://$${1}/huntarr/
-      - traefik.http.middlewares.huntarr-slash.redirectregex.permanent=true
-      - traefik.http.middlewares.huntarr-strip.stripprefix.prefixes=/huntarr
-      - traefik.http.middlewares.huntarr-xfp.headers.customrequestheaders.X-Forwarded-Prefix=/huntarr
-      - traefik.http.routers.huntarr.middlewares=huntarr-slash,huntarr-strip,huntarr-xfp
       - homepage.group=Download
       - homepage.name=Huntarr
       - homepage.icon=huntarr.png
@@ -464,20 +548,12 @@ services:
       - PUID=${USER_ID}
       - PGID=${GROUP_ID}
       - TZ=${TIMEZONE}
-    ports:
-      - "8081:8080"
     volumes:
       - ${CONFIG_ROOT:-.}/sabnzbd:/config
-      - ${DATA_ROOT}:/data
+      - ${DATA_ROOT}:/media
     restart: always
+    network_mode: "service:vpn"
     labels:
-      - traefik.enable=true
-      - traefik.http.middlewares.sabnzbd-strip.stripprefix.prefixes=/sabnzbd
-      - traefik.http.routers.sabnzbd.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/sabnzbd`))
-      - traefik.http.routers.sabnzbd.tls=true
-      - traefik.http.routers.sabnzbd.tls.certresolver=myresolver
-      - traefik.http.routers.sabnzbd.middlewares=sabnzbd-strip
-      - traefik.http.services.sabnzbd.loadbalancer.server.port=8080
       - homepage.group=Download
       - homepage.name=Sabnzbd
       - homepage.icon=sabnzbd.png
@@ -485,7 +561,7 @@ services:
       - homepage.description=Usenet
       - homepage.weight=3
       - homepage.widget.type=sabnzbd
-      - homepage.widget.url=http://sabnzbd:8080
+      - homepage.widget.url=http://localhost:8080
       - homepage.widget.key=${SABNZBD_API_KEY}
     profiles:
       - sabnzbd
@@ -499,24 +575,14 @@ services:
       - JELLYFIN_PublishedServerUrl=${HOSTNAME}/jellyfin
     volumes:
       - ${CONFIG_ROOT:-.}/jellyfin:/config
-      - ${DATA_ROOT}:/data
-    ports:
-      - "7359:7359/udp"
-      - "1900:1900/udp"
-      - "8096:8096"
+      - ${DATA_ROOT}:/media
     restart: always
+    network_mode: "service:vpn"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:8096/jellyfin/health"]
       interval: 1m
       retries: 10
     labels:
-      - traefik.enable=true
-      - traefik.http.middlewares.jellyfin-strip.stripprefix.prefixes=/jellyfin
-      - traefik.http.routers.jellyfin.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/jellyfin`))
-      - traefik.http.routers.jellyfin.tls=true
-      - traefik.http.routers.jellyfin.tls.certresolver=myresolver
-      - traefik.http.routers.jellyfin.middlewares=jellyfin-strip
-      - traefik.http.services.jellyfin.loadbalancer.server.port=8096
       - homepage.group=Media
       - homepage.name=Jellyfin
       - homepage.icon=jellyfin.png
@@ -524,13 +590,11 @@ services:
       - homepage.description=Media server
       - homepage.weight=4
       - homepage.widget.type=jellyfin
-      - homepage.widget.url=http://jellyfin:8096/jellyfin
+      - homepage.widget.url=http://localhost:8096/jellyfin
       - homepage.widget.key=${JELLYFIN_API_KEY}
   calibre-web:
     image: lscr.io/linuxserver/calibre-web:latest
     container_name: calibre-web
-    ports:
-      - "8083:8083"
     environment:
       - PUID=${USER_ID}
       - PGID=${GROUP_ID}
@@ -541,16 +605,8 @@ services:
       - ${CONFIG_ROOT:-.}/calibre-web:/config
       - ${DATA_ROOT}/books:/books
     restart: unless-stopped
+    network_mode: "service:vpn"
     labels:
-      - traefik.enable=true
-      - traefik.http.middlewares.calibre-headers.headers.customRequestHeaders.X-Scheme=https
-      - traefik.http.middlewares.calibre-headers.headers.customRequestHeaders.X-Script-Name=/calibre
-      - traefik.http.middlewares.calibre-stripprefixregex.stripPrefixRegex.regex=/calibre
-      - traefik.http.routers.calibre.middlewares=calibre-headers,calibre-stripprefixregex
-      - traefik.http.routers.calibre.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/calibre`))
-      - traefik.http.routers.calibre.tls=true
-      - traefik.http.routers.calibre.tls.certresolver=myresolver
-      - traefik.http.services.calibre.loadbalancer.server.port=8083
       - homepage.group=Media
       - homepage.name=Calibre-Web
       - homepage.icon=calibre-web.png
@@ -558,7 +614,7 @@ services:
       - homepage.description=Books management
       - homepage.weight=5
       - homepage.widget.type=calibreweb
-      - homepage.widget.url=http://calibre-web:8083
+      - homepage.widget.url=http://localhost:8083
       - homepage.widget.username=${CALIBRE_USERNAME}
       - homepage.widget.password=${CALIBRE_PASSWORD}
     profiles:
@@ -566,8 +622,9 @@ services:
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage
-    ports:
-      - "3000:3000"
+    depends_on:
+      vpn:
+        condition: service_healthy
     environment:
       - HOMEPAGE_VAR_TITLE=${HOMEPAGE_VAR_TITLE}
       - HOMEPAGE_VAR_SEARCH_PROVIDER=${HOMEPAGE_VAR_SEARCH_PROVIDER}
@@ -581,18 +638,11 @@ services:
     volumes:
       - ${CONFIG_ROOT:-.}/homepage:/app/config
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${DATA_ROOT}:/data
+      - ${DATA_ROOT}:/media
     restart: always
+    network_mode: "service:vpn"
     command:
       [sh, -c, "cp -n /app/config/tpl/*.yaml /app/config && node server.js"]
-    labels:
-      - traefik.enable=true
-      - traefik.http.middlewares.homepage-auth.basicauth.users=${HOMEPAGE_BASIC_AUTH}
-      - traefik.http.routers.homepage.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/`))
-      - traefik.http.routers.homepage.tls=true
-      - traefik.http.routers.homepage.tls.certresolver=myresolver
-      - traefik.http.routers.homepage.middlewares=homepage-auth
-      - traefik.http.services.homepage.loadbalancer.server.port=3000
   route53-ddns:
     image: amazon/aws-cli:2.15.41
     container_name: route53-ddns

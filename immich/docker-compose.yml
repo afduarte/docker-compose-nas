@@ -29,7 +29,7 @@ services:
       - homepage.description=Self-hosted photo and video management solution
       - homepage.weight=4
       - homepage.widget.type=immich
-      - homepage.widget.url=http://immich-server:2283
+      - homepage.widget.url=http://immich_server:2283
       - homepage.widget.key=${IMMICH_API_KEY}
       - homepage.widget.version=2
     profiles:
