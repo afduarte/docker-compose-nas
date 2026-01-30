@@ -23,5 +23,7 @@ docker-compose.override.yml
 /cleanuparr
 /cross-seed
 /autobrr
+/steam-headless
+/tdarr
 !/cleanuparr/blacklist.json
 !/cleanuparr/logs/.gitkeep
