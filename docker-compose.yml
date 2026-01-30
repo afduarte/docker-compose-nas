@@ -55,41 +55,6 @@ services:
       - DNS_UPSTREAM_RESOLVERS=cloudflare,google
     volumes:
       - ${CONFIG_ROOT:-.}/protonvpn:/gluetun
-    ports:
-      # qBittorrent
-      - "9080:9080"
-      - "6881:6881"
-      - "6881:6881/udp"
-      # Prowlarr
-      - "9696:9696"
-      # FlareSolverr
-      - "8191:8191"
-      # Sonarr
-      - "8989:8989"
-      # Radarr
-      - "7878:7878"
-      # Lidarr
-      - "8686:8686"
-      # Bazarr
-      - "6767:6767"
-      # Jellyseerr
-      - "5055:5055"
-      # Cleanuparr
-      - "11011:11011"
-      # Huntarr
-      - "9705:9705"
-      # Sabnzbd
-      - "8080:8080"
-      # Jellyfin
-      - "8096:8096"
-      - "7359:7359/udp"
-      - "1900:1900/udp"
-      # Calibre-web
-      - "8083:8083"
-      # Homepage
-      - "3000:3000"
-      # Autobrr
-      - "7474:7474"
     restart: always
     healthcheck:
       test:
@@ -197,6 +162,14 @@ services:
       - traefik.http.routers.jellyfin.service=jellyfin
       - traefik.http.routers.jellyfin.middlewares=jellyfin-strip
       - traefik.http.services.jellyfin.loadbalancer.server.port=8096
+      # Tdarr
+      - traefik.http.middlewares.tdarr-strip.stripprefix.prefixes=/tdarr
+      - traefik.http.routers.tdarr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/tdarr`))
+      - traefik.http.routers.tdarr.tls=true
+      - traefik.http.routers.tdarr.tls.certresolver=myresolver
+      - traefik.http.routers.tdarr.service=tdarr
+      - traefik.http.routers.tdarr.middlewares=tdarr-strip
+      - traefik.http.services.tdarr.loadbalancer.server.port=8265
       # Calibre-web
       - traefik.http.middlewares.calibre-headers.headers.customRequestHeaders.X-Scheme=https
       - traefik.http.middlewares.calibre-headers.headers.customRequestHeaders.X-Script-Name=/calibre
@@ -619,6 +592,37 @@ services:
       - homepage.widget.password=${CALIBRE_PASSWORD}
     profiles:
       - calibre-web
+  tdarr:
+    image: ghcr.io/haveagitgat/tdarr:latest
+    container_name: tdarr
+    ports:
+      - "8265:8265"
+    depends_on:
+      vpn:
+        condition: service_healthy
+    environment:
+      - PUID=${USER_ID}
+      - PGID=${GROUP_ID}
+      - TZ=${TIMEZONE}
+    volumes:
+      - ${CONFIG_ROOT:-.}/tdarr/server:/app/server
+      - ${CONFIG_ROOT:-.}/tdarr/configs:/app/configs
+      - ${CONFIG_ROOT:-.}/tdarr/logs:/app/logs
+      - ${CONFIG_ROOT:-.}/tdarr/cache:/temp
+      - ${DATA_ROOT}:/media
+    restart: always
+    # network_mode: "service:vpn"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8265"]
+      interval: 1m
+      retries: 10
+    labels:
+      - homepage.group=Media
+      - homepage.name=Tdarr
+      - homepage.icon=tdarr.png
+      - homepage.href=/tdarr
+      - homepage.description=Transcode automation
+      - homepage.weight=6
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage
