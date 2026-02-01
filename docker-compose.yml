@@ -163,12 +163,10 @@ services:
       - traefik.http.routers.jellyfin.middlewares=jellyfin-strip
       - traefik.http.services.jellyfin.loadbalancer.server.port=8096
       # Tdarr
-      - traefik.http.middlewares.tdarr-strip.stripprefix.prefixes=/tdarr
-      - traefik.http.routers.tdarr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/tdarr`))
+      - traefik.http.routers.tdarr.rule=(Host(`${TDARR_HOSTNAME}`))
       - traefik.http.routers.tdarr.tls=true
       - traefik.http.routers.tdarr.tls.certresolver=myresolver
       - traefik.http.routers.tdarr.service=tdarr
-      - traefik.http.routers.tdarr.middlewares=tdarr-strip
       - traefik.http.services.tdarr.loadbalancer.server.port=8265
       # Calibre-web
       - traefik.http.middlewares.calibre-headers.headers.customRequestHeaders.X-Scheme=https
@@ -595,8 +593,6 @@ services:
   tdarr:
     image: ghcr.io/haveagitgat/tdarr:latest
     container_name: tdarr
-    ports:
-      - "8265:8265"
     depends_on:
       vpn:
         condition: service_healthy
@@ -604,6 +600,8 @@ services:
       - PUID=${USER_ID}
       - PGID=${GROUP_ID}
       - TZ=${TIMEZONE}
+      - webUIPort=8265
+      - serverPort=8266
     volumes:
       - ${CONFIG_ROOT:-.}/tdarr/server:/app/server
       - ${CONFIG_ROOT:-.}/tdarr/configs:/app/configs
@@ -611,7 +609,7 @@ services:
       - ${CONFIG_ROOT:-.}/tdarr/cache:/temp
       - ${DATA_ROOT}:/media
     restart: always
-    # network_mode: "service:vpn"
+    network_mode: "service:vpn"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://127.0.0.1:8265"]
       interval: 1m
@@ -620,7 +618,8 @@ services:
       - homepage.group=Media
       - homepage.name=Tdarr
       - homepage.icon=tdarr.png
-      - homepage.href=/tdarr
+      - homepage.widget.url=http://localhost:8265
+      - homepage.href=https://${TDARR_HOSTNAME}
       - homepage.description=Transcode automation
       - homepage.weight=6
   homepage:
