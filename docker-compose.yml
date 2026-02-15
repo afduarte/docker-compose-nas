@@ -3,6 +3,9 @@ services:
     image: ghcr.io/traefik/traefik:3.6
     container_name: traefik
     restart: always
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     environment:
       - LETS_ENCRYPT_EMAIL=${LETS_ENCRYPT_EMAIL}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
@@ -14,6 +17,10 @@ services:
       - --accesslog=true
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
+      - --providers.docker.watch=true
+      - --providers.docker.allowEmptyServices=false
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
       - --entrypoints.web.address=:80
       - --entrypoints.web-secure.address=:443
       - --entrypoints.web.http.redirections.entryPoint.to=web-secure
