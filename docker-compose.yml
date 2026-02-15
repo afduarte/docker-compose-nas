@@ -602,6 +602,7 @@ services:
       - TZ=${TIMEZONE}
       - webUIPort=8265
       - serverPort=8266
+      - auth=true
     volumes:
       - ${CONFIG_ROOT:-.}/tdarr/server:/app/server
       - ${CONFIG_ROOT:-.}/tdarr/configs:/app/configs
