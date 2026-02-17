@@ -205,7 +205,7 @@ services:
       - TZ=${TIMEZONE}
     volumes:
       - ${CONFIG_ROOT:-.}/sonarr:/config
-      - ${DATA_ROOT}:/media
+      - ${DATA_ROOT}/series:/media/series
       - ${DOWNLOAD_ROOT}:/media/torrents
     restart: always
     network_mode: "service:vpn"
@@ -235,7 +235,7 @@ services:
       - TZ=${TIMEZONE}
     volumes:
       - ${CONFIG_ROOT:-.}/radarr:/config
-      - ${DATA_ROOT}:/media
+      - ${DATA_ROOT}/filums:/media/filums
       - ${DOWNLOAD_ROOT}:/media/torrents
     restart: always
     network_mode: "service:vpn"
@@ -265,7 +265,7 @@ services:
       - TZ=${TIMEZONE}
     volumes:
       - ${CONFIG_ROOT:-.}/lidarr:/config
-      - ${DATA_ROOT}:/media
+      - ${DATA_ROOT}/music:/media/music
       - ${DOWNLOAD_ROOT}:/media/torrents
     restart: always
     network_mode: "service:vpn"
@@ -297,7 +297,8 @@ services:
       - TZ=${TIMEZONE}
     volumes:
       - ${CONFIG_ROOT:-.}/bazarr/config:/config
-      - ${DATA_ROOT}:/media
+      - ${DATA_ROOT}/series:/media/series
+      - ${DATA_ROOT}/filums:/media/filums
       - ${DOWNLOAD_ROOT}:/media/torrents
     restart: always
     network_mode: "service:vpn"
@@ -532,7 +533,9 @@ services:
       - TZ=${TIMEZONE}
     volumes:
       - ${CONFIG_ROOT:-.}/sabnzbd:/config
-      - ${DATA_ROOT}:/media
+      - ${DATA_ROOT}/series:/media/series
+      - ${DATA_ROOT}/filums:/media/filums
+      - ${DATA_ROOT}/music:/media/music
       - ${DOWNLOAD_ROOT}:/media/torrents
     restart: always
     network_mode: "service:vpn"
@@ -558,7 +561,9 @@ services:
       - JELLYFIN_PublishedServerUrl=${HOSTNAME}/jellyfin
     volumes:
       - ${CONFIG_ROOT:-.}/jellyfin:/config
-      - ${DATA_ROOT}:/media
+      - ${DATA_ROOT}/series:/media/series
+      - ${DATA_ROOT}/filums:/media/filums
+      - ${DATA_ROOT}/music:/media/music
     restart: always
     network_mode: "service:vpn"
     healthcheck:
@@ -620,7 +625,9 @@ services:
       - ${CONFIG_ROOT:-.}/tdarr/configs:/app/configs
       - ${CONFIG_ROOT:-.}/tdarr/logs:/app/logs
       - ${CONFIG_ROOT:-.}/tdarr/cache:/temp
-      - ${DATA_ROOT}:/media
+      - ${DATA_ROOT}/series:/media/series
+      - ${DATA_ROOT}/filums:/media/filums
+      - ${DATA_ROOT}/music:/media/music
     restart: always
     network_mode: "service:vpn"
     healthcheck:
@@ -654,7 +661,8 @@ services:
     volumes:
       - ${CONFIG_ROOT:-.}/homepage:/app/config
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${DATA_ROOT}:/media
+      - ${DATA_ROOT}:/slow:ro
+      - ${DOWNLOAD_ROOT}:/media:ro
     restart: always
     network_mode: "service:vpn"
     command:

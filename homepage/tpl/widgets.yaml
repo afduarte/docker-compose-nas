@@ -7,7 +7,15 @@
     memory: true
     disk:
       - /
-      - /data
+    label: System
+- resources:
+    disk:
+      - /slow
+    label: HDD Pool
+- resources:
+    disk:
+      - /media
+    label: SSD Downloads
 
 - search:
     provider: {{HOMEPAGE_VAR_SEARCH_PROVIDER}}
