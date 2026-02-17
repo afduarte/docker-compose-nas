@@ -206,6 +206,7 @@ services:
     volumes:
       - ${CONFIG_ROOT:-.}/sonarr:/config
       - ${DATA_ROOT}:/media
+      - ${DOWNLOAD_ROOT}:/media/torrents
     restart: always
     network_mode: "service:vpn"
     healthcheck:
@@ -235,6 +236,7 @@ services:
     volumes:
       - ${CONFIG_ROOT:-.}/radarr:/config
       - ${DATA_ROOT}:/media
+      - ${DOWNLOAD_ROOT}:/media/torrents
     restart: always
     network_mode: "service:vpn"
     healthcheck:
@@ -264,6 +266,7 @@ services:
     volumes:
       - ${CONFIG_ROOT:-.}/lidarr:/config
       - ${DATA_ROOT}:/media
+      - ${DOWNLOAD_ROOT}:/media/torrents
     restart: always
     network_mode: "service:vpn"
     healthcheck:
@@ -295,6 +298,7 @@ services:
     volumes:
       - ${CONFIG_ROOT:-.}/bazarr/config:/config
       - ${DATA_ROOT}:/media
+      - ${DOWNLOAD_ROOT}:/media/torrents
     restart: always
     network_mode: "service:vpn"
     healthcheck:
@@ -529,6 +533,7 @@ services:
     volumes:
       - ${CONFIG_ROOT:-.}/sabnzbd:/config
       - ${DATA_ROOT}:/media
+      - ${DOWNLOAD_ROOT}:/media/torrents
     restart: always
     network_mode: "service:vpn"
     labels:
