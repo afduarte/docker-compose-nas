@@ -60,6 +60,7 @@ services:
       - TZ=${TIMEZONE}
       - DNS_UPSTREAM_RESOLVER_TYPE=plain
       - DNS_UPSTREAM_RESOLVERS=cloudflare,google
+      - UPDATER_PERIOD=24h
     volumes:
       - ${CONFIG_ROOT:-.}/protonvpn:/gluetun
     restart: always
@@ -73,6 +74,7 @@ services:
       retries: 10
       start_period: 120s
     labels:
+      - com.centurylinklabs.watchtower.enable=false
       - traefik.enable=true
       # Sonarr
       - traefik.http.routers.sonarr.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/sonarr`))
@@ -689,6 +691,7 @@ services:
     container_name: watchtower
     restart: always
     environment:
+      - WATCHTOWER_LABEL_ENABLE=true
       - WATCHTOWER_CLEANUP=true
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -701,9 +704,90 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 
+  # ── AI Chat Frontends ──────────────────────────────────────────────
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    restart: always
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_AUTH=true
+      - WEBUI_NAME=Och AI
+    volumes:
+      - ${CONFIG_ROOT:-.}/open-webui:/app/backend/data
+    networks:
+      - default
+      - ollama-net
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=docker-compose-nas
+      - traefik.http.routers.open-webui.rule=Host(`${OPENWEBUI_HOSTNAME}`)
+      - traefik.http.routers.open-webui.tls=true
+      - traefik.http.routers.open-webui.tls.certresolver=myresolver
+      - traefik.http.routers.open-webui.service=open-webui
+      - traefik.http.services.open-webui.loadbalancer.server.port=8080
+      - homepage.group=AI
+      - homepage.name=Open WebUI
+      - homepage.icon=open-webui.png
+      - homepage.href=https://${OPENWEBUI_HOSTNAME}
+      - homepage.description=Chat with local LLMs
+      - homepage.weight=1
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
+      interval: 1m
+      retries: 10
+
+  # ── Media Management ───────────────────────────────────────────────
+  ememe:
+    build:
+      context: /home/antero/ememe
+    container_name: ememe
+    restart: unless-stopped
+    environment:
+      - TZ=${TIMEZONE}
+      - PORT=3015
+      - HOST=0.0.0.0
+      - DATABASE_PATH=/data/ememe.sqlite
+      - ROOTS=media-films|/media/filums|library;media-series|/media/series|library;downloads|/media/torrents|downloads
+      - SCAN_ON_BOOT=true
+      - HASH_WORKERS=16
+      - SCAN_CONCURRENCY=64
+      - PROBE_VIDEOS=true
+      - DEFAULT_POLICY_ENABLED=false
+      - DEFAULT_POLICY_DRY_RUN=true
+      - DEFAULT_POLICY_SCHEDULE=03:30
+      - DEFAULT_POLICY_MIN_CONFIDENCE=0.80
+      - DELETE_ACTION_RESCAN=false
+    volumes:
+      - /home/antero/ememe/data:/data
+      - ${DATA_ROOT}/filums:/media/filums
+      - ${DATA_ROOT}/series:/media/series
+      - ${DOWNLOAD_ROOT}:/media/torrents
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.ememe.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/ememe`))
+      - traefik.http.routers.ememe.tls=true
+      - traefik.http.routers.ememe.tls.certresolver=myresolver
+      - traefik.http.routers.ememe.service=ememe
+      - traefik.http.services.ememe.loadbalancer.server.port=3015
+      - traefik.http.middlewares.ememe-strip.stripprefix.prefixes=/ememe
+      - traefik.http.middlewares.ememe-auth.basicauth.users=${HOMEPAGE_BASIC_AUTH}
+      - traefik.http.middlewares.ememe-slash.redirectregex.regex=^(https?://[^/]+/ememe)$$
+      - traefik.http.middlewares.ememe-slash.redirectregex.replacement=$${1}/
+      - traefik.http.middlewares.ememe-slash.redirectregex.permanent=true
+      - traefik.http.routers.ememe.middlewares=ememe-slash,ememe-auth,ememe-strip
+      - homepage.group=Media
+      - homepage.name=ememe
+      - homepage.icon=mdi-file-search
+      - homepage.href=https://${HOSTNAME}/ememe
+      - homepage.description=Duplicate & bloat finder
+
 networks:
   default:
     name: docker-compose-nas
+  ollama-net:
+    external: true
+    name: ollama-net
 
 volumes:
   route53-ddns-state:

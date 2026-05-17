@@ -25,5 +25,6 @@ docker-compose.override.yml
 /autobrr
 /steam-headless
 /tdarr
+/open-webui
 !/cleanuparr/blacklist.json
 !/cleanuparr/logs/.gitkeep
