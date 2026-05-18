@@ -1,0 +1,117 @@
+services:
+  audiomuse-postgres:
+    image: postgres:15-alpine
+    container_name: audiomuse-postgres
+    environment:
+      POSTGRES_USER: audiomuse
+      POSTGRES_PASSWORD: ${AUDIOMUSE_DB_PASSWORD}
+      POSTGRES_DB: audiomusedb
+    volumes:
+      - audiomuse-postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - docker-compose-nas
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U audiomuse -d audiomusedb"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  audiomuse-redis:
+    image: redis:7-alpine
+    container_name: audiomuse-redis
+    volumes:
+      - audiomuse-redis-data:/data
+    restart: unless-stopped
+    networks:
+      - docker-compose-nas
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  audiomuse-ai-worker:
+    image: ghcr.io/neptunehub/audiomuse-ai:latest
+    container_name: audiomuse-ai-worker
+    environment:
+      SERVICE_TYPE: worker
+      TZ: ${TIMEZONE}
+      POSTGRES_USER: audiomuse
+      POSTGRES_PASSWORD: ${AUDIOMUSE_DB_PASSWORD}
+      POSTGRES_DB: audiomusedb
+      POSTGRES_HOST: audiomuse-postgres
+      POSTGRES_PORT: "5432"
+      REDIS_URL: redis://audiomuse-redis:6379/0
+      TEMP_DIR: /app/temp_audio
+    volumes:
+      - audiomuse-temp-audio:/app/temp_audio
+    depends_on:
+      audiomuse-postgres:
+        condition: service_healthy
+      audiomuse-redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - docker-compose-nas
+
+  audiomuse-ai-flask:
+    image: ghcr.io/neptunehub/audiomuse-ai:latest
+    container_name: audiomuse-ai-flask
+    environment:
+      SERVICE_TYPE: flask
+      TZ: ${TIMEZONE}
+      POSTGRES_USER: audiomuse
+      POSTGRES_PASSWORD: ${AUDIOMUSE_DB_PASSWORD}
+      POSTGRES_DB: audiomusedb
+      POSTGRES_HOST: audiomuse-postgres
+      POSTGRES_PORT: "5432"
+      REDIS_URL: redis://audiomuse-redis:6379/0
+      TEMP_DIR: /app/temp_audio
+      ENABLE_PROXY_FIX: "true"
+    volumes:
+      - audiomuse-temp-audio:/app/temp_audio
+    depends_on:
+      audiomuse-postgres:
+        condition: service_healthy
+      audiomuse-redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - docker-compose-nas
+      - ollama-net
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 1m
+      retries: 10
+      start_period: 60s
+    labels:
+      # Traefik routing
+      - traefik.enable=true
+      - traefik.docker.network=docker-compose-nas
+      - traefik.http.routers.audiomuse.rule=Host(`${AUDIOMUSE_HOSTNAME}`)
+      - traefik.http.routers.audiomuse.tls=true
+      - traefik.http.routers.audiomuse.tls.certresolver=myresolver
+      - traefik.http.routers.audiomuse.service=audiomuse
+      - traefik.http.services.audiomuse.loadbalancer.server.port=8000
+      # Homepage dashboard
+      - homepage.group=Media
+      - homepage.name=AudioMuse AI
+      - homepage.icon=mdi-music-note-plus
+      - homepage.href=https://${AUDIOMUSE_HOSTNAME}
+      - homepage.description=Smart playlist generator
+      - homepage.weight=8
+
+networks:
+  docker-compose-nas:
+    external: true
+    name: docker-compose-nas
+  ollama-net:
+    external: true
+    name: ollama-net
+
+volumes:
+  audiomuse-postgres-data:
+  audiomuse-redis-data:
+  audiomuse-temp-audio:
