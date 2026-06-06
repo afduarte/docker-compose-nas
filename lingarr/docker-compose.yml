@@ -1,0 +1,34 @@
+services:
+  lingarr:
+    image: ghcr.io/lingarr-translate/lingarr:latest
+    container_name: lingarr
+    restart: unless-stopped
+    environment:
+      - TZ=${TIMEZONE}
+      - ASPNETCORE_URLS=http://+:9876
+      - DB_CONNECTION=sqlite
+    volumes:
+      - ${CONFIG_ROOT}/lingarr/config:/app/config
+      - ${DATA_ROOT}/filums:/movies
+      - ${DATA_ROOT}/series:/tv
+    networks:
+      docker-compose-nas:
+        aliases:
+          - lingarr
+      ollama-net:
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=docker-compose-nas
+      - traefik.http.routers.lingarr.rule=Host(`${LINGARR_HOSTNAME}`)
+      - traefik.http.routers.lingarr.tls=true
+      - traefik.http.routers.lingarr.tls.certresolver=myresolver
+      - traefik.http.routers.lingarr.service=lingarr
+      - traefik.http.services.lingarr.loadbalancer.server.port=9876
+
+networks:
+  docker-compose-nas:
+    external: true
+    name: docker-compose-nas
+  ollama-net:
+    external: true
+    name: ollama-net

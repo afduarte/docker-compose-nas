@@ -28,3 +28,4 @@ docker-compose.override.yml
 /open-webui
 !/cleanuparr/blacklist.json
 !/cleanuparr/logs/.gitkeep
+/lingarr/config
