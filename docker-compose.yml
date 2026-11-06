@@ -644,9 +644,15 @@ services:
     network_mode: "service:vpn"
     command:
       [sh, -c, "cp -n /app/config/tpl/*.yaml /app/config && node server.js"]
+  # Route53 dynamic DNS. Disabled by default because DNS is currently served
+  # through the Oracle VPS reverse tunnel (static IP 143.47.251.31); the home
+  # IP is no longer published. Enable with COMPOSE_PROFILES=route53-ddns if
+  # reverting to direct hosting. Host networking is required so that the
+  # updater can discover the host's public IPv4 and IPv6 addresses.
   route53-ddns:
     image: amazon/aws-cli:2.15.41
     container_name: route53-ddns
+    network_mode: host
     environment:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
@@ -655,15 +661,23 @@ services:
       - ROUTE53_RECORDS=${ROUTE53_RECORDS}
       - ROUTE53_TTL=${ROUTE53_TTL}
       - ROUTE53_UPDATE_INTERVAL=${ROUTE53_UPDATE_INTERVAL}
+      - ROUTE53_ENABLE_IPV6=${ROUTE53_ENABLE_IPV6:-true}
       - TZ=${TIMEZONE}
     volumes:
       - ${CONFIG_ROOT:-.}/route53-ddns:/opt/route53-ddns:ro
       - route53-ddns-state:/var/lib/route53-ddns
     entrypoint: ["/bin/sh", "/opt/route53-ddns/entrypoint.sh"]
     restart: always
+    profiles:
+      - route53-ddns
+  # Disabled 2026-10-23: watchtower was not working correctly here. Kept out of the
+  # active stack via a profile until fixed.
+  # Re-enable later with: docker compose --profile watchtower up -d
   watchtower:
     image: ghcr.io/nicholas-fedor/watchtower:latest
     container_name: watchtower
+    profiles:
+      - watchtower
     restart: always
     environment:
       - WATCHTOWER_LABEL_ENABLE=true
