@@ -50,6 +50,7 @@ services:
       - "traefik.http.routers.adguardhome.rule=(Host(`${ADGUARD_HOSTNAME}`))"
       - "traefik.http.routers.adguardhome.tls=true"
       - "traefik.http.routers.adguardhome.tls.certresolver=myresolver"
+      - "traefik.http.routers.adguardhome.middlewares=homepage-auth"
       - homepage.group=Utilities
       - homepage.name=Adguard
       - homepage.icon=adguard-home.png

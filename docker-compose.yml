@@ -137,7 +137,7 @@ services:
       - traefik.http.routers.qbittorrent.tls.certresolver=myresolver
       - traefik.http.routers.qbittorrent.service=qbittorrent
       - traefik.http.services.qbittorrent.loadbalancer.server.port=9080
-      - traefik.http.routers.qbittorrent.middlewares=qbittorrent-strip-slash,qbittorrent-stripprefix
+      - traefik.http.routers.qbittorrent.middlewares=qbittorrent-strip-slash,qbittorrent-stripprefix,homepage-auth
       - traefik.http.middlewares.qbittorrent-stripprefix.stripPrefix.prefixes=/qbittorrent
       - traefik.http.middlewares.qbittorrent-strip-slash.redirectregex.regex=(^.*\/qbittorrent$$)
       - traefik.http.middlewares.qbittorrent-strip-slash.redirectregex.replacement=$$1/
@@ -746,11 +746,10 @@ services:
       - traefik.http.routers.ememe.service=ememe
       - traefik.http.services.ememe.loadbalancer.server.port=3015
       - traefik.http.middlewares.ememe-strip.stripprefix.prefixes=/ememe
-      - traefik.http.middlewares.ememe-auth.basicauth.users=${HOMEPAGE_BASIC_AUTH}
       - traefik.http.middlewares.ememe-slash.redirectregex.regex=^(https?://[^/]+/ememe)$$
       - traefik.http.middlewares.ememe-slash.redirectregex.replacement=$${1}/
       - traefik.http.middlewares.ememe-slash.redirectregex.permanent=true
-      - traefik.http.routers.ememe.middlewares=ememe-slash,ememe-auth,ememe-strip
+      - traefik.http.routers.ememe.middlewares=ememe-slash,homepage-auth,ememe-strip
       - homepage.group=Media
       - homepage.name=ememe
       - homepage.icon=mdi-file-search
