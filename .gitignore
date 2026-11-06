@@ -29,3 +29,4 @@ docker-compose.override.yml
 !/cleanuparr/blacklist.json
 !/cleanuparr/logs/.gitkeep
 /lingarr/config
+/unmanic
