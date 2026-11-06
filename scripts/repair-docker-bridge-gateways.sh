@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Repairs Docker bridge networks after a host networking event: brings each
+# bridge up, restores its gateway address, and re-enables any veth ports that
+# were left down (which otherwise leave running containers unable to talk).
 set -euo pipefail
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -55,4 +58,16 @@ while IFS= read -r network_name; do
         echo "repaired $network_name: added $gateway_cidr to $bridge_name"
       fi
     done
+
+  # Re-enable veth ports that were left down when the bridge lost its
+  # address. Docker does not bring these back up on its own, which leaves
+  # running containers unable to reach each other.
+  veths="$(ip -o link show master "$bridge_name" 2>/dev/null | awk -F': ' '{print $2}' | cut -d@ -f1 || true)"
+  for iface in $veths; do
+    [ -n "$iface" ] || continue
+    if ip -o link show "$iface" | grep -q "state DOWN"; then
+      ip link set "$iface" up
+      echo "repaired $network_name: brought up $iface"
+    fi
+  done
 done <<< "$network_names"
