@@ -619,6 +619,42 @@ services:
       - homepage.href=https://${TDARR_HOSTNAME}
       - homepage.description=Transcode automation
       - homepage.weight=6
+    profiles:
+      - tdarr
+  unmanic:
+    image: josh5/unmanic:0.4.1
+    container_name: unmanic
+    environment:
+      - PUID=${USER_ID}
+      - PGID=${GROUP_ID}
+      - TZ=${TIMEZONE}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+    volumes:
+      - ${CONFIG_ROOT:-.}/unmanic:/config
+      - ${CONFIG_ROOT:-.}/unmanic/cache:/tmp/unmanic
+      - ${DATA_ROOT}/series:/library/series
+      - ${DATA_ROOT}/filums:/library/filums
+      - ${DATA_ROOT}/music:/library/music
+    gpus: all
+    restart: unless-stopped
+    networks:
+      - default
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=docker-compose-nas
+      - traefik.http.routers.unmanic.rule=(Host(`${HOSTNAME}`) && PathPrefix(`/unmanic`))
+      - traefik.http.routers.unmanic.tls=true
+      - traefik.http.routers.unmanic.tls.certresolver=myresolver
+      - traefik.http.routers.unmanic.service=unmanic
+      - traefik.http.routers.unmanic.middlewares=homepage-auth
+      - traefik.http.services.unmanic.loadbalancer.server.port=8888
+      - homepage.group=Media
+      - homepage.name=Unmanic
+      - homepage.icon=unmanic.png
+      - homepage.href=/unmanic
+      - homepage.description=Library optimization
+      - homepage.weight=6
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage
