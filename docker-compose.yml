@@ -117,11 +117,6 @@ services:
       - traefik.http.routers.prowlarr.tls.certresolver=myresolver
       - traefik.http.routers.prowlarr.service=prowlarr
       - traefik.http.services.prowlarr.loadbalancer.server.port=9696
-      # FlareSolverr
-      - traefik.http.routers.flaresolverr.rule=PathPrefix(`/flaresolverr`)
-      - traefik.http.routers.flaresolverr.tls=true
-      - traefik.http.routers.flaresolverr.service=flaresolverr
-      - traefik.http.services.flaresolverr.loadbalancer.server.port=8191
       # Autobrr
       - traefik.http.middlewares.autobrr-strip.stripprefix.prefixes=/autobrr
       - traefik.http.middlewares.autobrr-strip.stripprefix.forceSlash=true
@@ -156,12 +151,6 @@ services:
       - traefik.http.routers.sabnzbd.service=sabnzbd
       - traefik.http.routers.sabnzbd.middlewares=sabnzbd-strip
       - traefik.http.services.sabnzbd.loadbalancer.server.port=8080
-      # Tdarr
-      - traefik.http.routers.tdarr.rule=(Host(`${TDARR_HOSTNAME}`))
-      - traefik.http.routers.tdarr.tls=true
-      - traefik.http.routers.tdarr.tls.certresolver=myresolver
-      - traefik.http.routers.tdarr.service=tdarr
-      - traefik.http.services.tdarr.loadbalancer.server.port=8265
       # Calibre-web
       - traefik.http.middlewares.calibre-headers.headers.customRequestHeaders.X-Scheme=https
       - traefik.http.middlewares.calibre-headers.headers.customRequestHeaders.X-Script-Name=/calibre
