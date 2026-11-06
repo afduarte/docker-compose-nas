@@ -793,7 +793,7 @@ services:
   # ── Media Management ───────────────────────────────────────────────
   ememe:
     build:
-      context: /home/antero/ememe
+      context: ${EMEME_ROOT:-/home/antero/ememe}
     container_name: ememe
     restart: unless-stopped
     environment:
@@ -812,7 +812,7 @@ services:
       - DEFAULT_POLICY_MIN_CONFIDENCE=0.80
       - DELETE_ACTION_RESCAN=false
     volumes:
-      - /home/antero/ememe/data:/data
+      - ${EMEME_ROOT:-/home/antero/ememe}/data:/data
       - ${DATA_ROOT}/filums:/media/filums
       - ${DATA_ROOT}/series:/media/series
       - ${DOWNLOAD_ROOT}:/media/torrents
