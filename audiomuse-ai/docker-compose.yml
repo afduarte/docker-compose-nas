@@ -33,7 +33,7 @@ services:
       retries: 5
 
   audiomuse-ai-worker:
-    image: ghcr.io/neptunehub/audiomuse-ai:latest
+    image: ghcr.io/neptunehub/audiomuse-ai:3.6.3
     container_name: audiomuse-ai-worker
     environment:
       SERVICE_TYPE: worker
@@ -55,9 +55,10 @@ services:
     restart: unless-stopped
     networks:
       - docker-compose-nas
+      - ollama-net
 
   audiomuse-ai-flask:
-    image: ghcr.io/neptunehub/audiomuse-ai:latest
+    image: ghcr.io/neptunehub/audiomuse-ai:3.6.3
     container_name: audiomuse-ai-flask
     environment:
       SERVICE_TYPE: flask
