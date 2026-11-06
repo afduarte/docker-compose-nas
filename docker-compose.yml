@@ -833,6 +833,8 @@ services:
       - homepage.icon=mdi-file-search
       - homepage.href=https://${HOSTNAME}/ememe
       - homepage.description=Duplicate & bloat finder
+    profiles:
+      - ememe
 
 networks:
   default:
