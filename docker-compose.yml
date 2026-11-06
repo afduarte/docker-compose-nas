@@ -565,7 +565,7 @@ services:
       interval: 1m
       retries: 10
     networks:
-      - docker-compose-nas
+      - default
     labels:
       - homepage.group=Media
       - homepage.name=Jellyfin
