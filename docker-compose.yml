@@ -404,12 +404,18 @@ services:
     volumes:
       - ${CONFIG_ROOT:-.}/qbittorrent:/config
       - ${DOWNLOAD_ROOT}:/media/torrents
+      # ememetoo backlinks torrent files into the library; qBittorrent must be
+      # able to resolve those symlinks to keep seeding.
+      - ${DATA_ROOT}/filums:/media/filums
+      - ${DATA_ROOT}/series:/media/series
+      - ${DATA_ROOT}/music:/media/music
     restart: always
     healthcheck:
-      test:
-        ["CMD", "curl", "--fail", "http://127.0.0.1:9080", "https://google.com"]
-      interval: 1m
-      retries: 10
+      test: ["CMD", "curl", "--fail", "http://127.0.0.1:9080"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
     network_mode: "service:vpn"
     labels:
       - homepage.group=Download
@@ -422,6 +428,35 @@ services:
       - homepage.widget.url=http://localhost:9080
       - homepage.widget.username=${QBITTORRENT_USERNAME}
       - homepage.widget.password=${QBITTORRENT_PASSWORD}
+  ememetoo:
+    build: ${EMEMETOO_ROOT:-/home/antero/ememetoo}
+    container_name: ememetoo
+    depends_on:
+      vpn:
+        condition: service_healthy
+      qbittorrent:
+        condition: service_healthy
+    environment:
+      - QBITTORRENT_URL=http://127.0.0.1:9080
+      - QBITTORRENT_USERNAME=${QBITTORRENT_USERNAME}
+      - QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD}
+      - TORRENTS_ROOT=/media/torrents
+      - FILMS_ROOT=/media/filums
+      - SERIES_ROOT=/media/series
+      - MUSIC_ROOT=/media/music
+      - EMEMETOO_DATA_DIR=/data
+      - EXCLUDED_CATEGORIES=radarr,sonarr,lidarr,imported
+      - PYTHONDONTWRITEBYTECODE=1
+    volumes:
+      - ${EMEMETOO_ROOT:-/home/antero/ememetoo}:/app
+      - ${EMEMETOO_ROOT:-/home/antero/ememetoo}/data:/data
+      - ${DOWNLOAD_ROOT}:/media/torrents
+      - ${DATA_ROOT}/filums:/media/filums
+      - ${DATA_ROOT}/series:/media/series
+      - ${DATA_ROOT}/music:/media/music
+    user: ${USER_ID}:${GROUP_ID}
+    restart: unless-stopped
+    network_mode: "service:vpn"
   cross-seed:
     image: ghcr.io/cross-seed/cross-seed:latest
     container_name: cross-seed
@@ -429,6 +464,10 @@ services:
     volumes:
       - ${CONFIG_ROOT:-.}/cross-seed:/config
       - ${DOWNLOAD_ROOT}:/media/torrents
+      # Resolve ememetoo backlinks into the library when hashing for cross-seeds.
+      - ${DATA_ROOT}/filums:/media/filums
+      - ${DATA_ROOT}/series:/media/series
+      - ${DATA_ROOT}/music:/media/music
     command: daemon
     restart: always
     network_mode: "service:vpn"
