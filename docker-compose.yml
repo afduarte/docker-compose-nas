@@ -43,7 +43,9 @@ services:
       interval: 1m
       retries: 10
     networks:
-      - docker-compose-nas
+      default:
+      traefik-public:
+        gw_priority: 1
   vpn:
     image: qmcgaw/gluetun:latest
     container_name: vpn
@@ -761,6 +763,9 @@ networks:
   ollama-net:
     external: true
     name: ollama-net
+  traefik-public:
+    external: true
+    name: traefik-public
 
 volumes:
   route53-ddns-state:
